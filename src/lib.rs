@@ -155,11 +155,6 @@ pub struct Comtrade {
     pub recording_device_id: String,
     pub revision: FormatRevision,
 
-    // Don't think it's really necessary for have these fields.
-    pub num_total_channels: u32,
-    pub num_analog_channels: u32,
-    pub num_status_channels: u32,
-
     pub sample_numbers: Vec<u32>,
     pub timestamps: Vec<f64>,
     pub analog_channels: Vec<AnalogChannel>,
@@ -193,9 +188,6 @@ impl Default for Comtrade {
             station_name: Default::default(),
             recording_device_id: Default::default(),
             revision: Default::default(),
-            num_total_channels: Default::default(),
-            num_analog_channels: Default::default(),
-            num_status_channels: Default::default(),
             sample_numbers: Default::default(),
             timestamps: Default::default(),
             analog_channels: Default::default(),

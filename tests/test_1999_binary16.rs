@@ -48,9 +48,6 @@ fn it_correctly_parses_sample_1999_files_with_binary16_data() {
         local_offset: None,
         time_quality: None,
         leap_second_status: None,
-        num_total_channels: 20,
-        num_analog_channels: 4,
-        num_status_channels: 16,
 
         sample_numbers: (1..=5).collect(),
         timestamps: (0..5).map(|i| i as f64 / expected_sample_rate).collect(),

@@ -47,47 +47,12 @@ impl<T: BufRead> ComtradeParser<T> {
         line_number += 1;
 
         line = lines.next().ok_or_else(early_end_err)?;
-        line_values = line.split(CFG_SEPARATOR).collect();
-
-        // Number and type of channels:
-        // TT,##A,##D
-        if line_values.len() != 3 {
-            return Err(ParseError::new(format!(
-                "unexpected number of values on line {}",
-                line_number
-            )));
-        }
-
-        let num_total_channels = line_values[0].trim().parse().map_err(|_| {
-            ParseError::new(format!(
-                "invalid integer value for number of total channels: '{}'",
-                line_values[0]
-            ))
-        })?;
-        self.builder.num_total_channels(num_total_channels);
-
-        let mut num_analog_channels_token = line_values[1].to_string();
-        // Last character contains "A" identifier.
-        num_analog_channels_token.pop();
-        let num_analog_channels = num_analog_channels_token.trim().parse().map_err(|_| {
-            ParseError::new(format!(
-                "invalid integer value for number of analog channels: '{}'",
-                num_analog_channels_token
-            ))
-        })?;
-        self.builder.num_analog_channels(num_analog_channels);
+        let ChannelSizes {
+            total: _,
+            analog: num_analog_channels,
+            status: num_status_channels,
+        } = ChannelSizes::from_line(split_cfg_line(line))?;
         self.num_analog_channels = num_analog_channels;
-
-        let mut num_status_channels_token = line_values[2].to_string();
-        // Last character contains "D" identifier.
-        num_status_channels_token.pop();
-        let num_status_channels = num_status_channels_token.trim().parse().map_err(|_| {
-            ParseError::new(format!(
-                "invalid integer value for number of status channels: '{}'",
-                num_status_channels_token
-            ))
-        })?;
-        self.builder.num_status_channels(num_status_channels);
         self.num_status_channels = num_status_channels;
 
         line_number += 1;
@@ -351,14 +316,17 @@ impl<T: BufRead> ComtradeParser<T> {
 
             // The sample number of the final sample that uses this sample rate. Note this corresponds
             // to the sample number value in the data itself, not an index.
-            let end_sample_number = line_values[1].trim().to_string().parse::<u32>().map_err(
-                |_| {
-                    ParseError::new(format!(
+            let end_sample_number =
+                line_values[1]
+                    .trim()
+                    .to_string()
+                    .parse::<u32>()
+                    .map_err(|_| {
+                        ParseError::new(format!(
                         "invalid integer value for end sample number for rate n# {} on line {}: {}",
                         i, line_number, line_values[1]
                     ))
-                },
-            )?;
+                    })?;
 
             sampling_rates.push(SamplingRate {
                 rate_hz,
@@ -370,7 +338,7 @@ impl<T: BufRead> ComtradeParser<T> {
             .iter()
             .map(|r| r.end_sample_number)
             .max()
-            .unwrap();
+            .unwrap() as usize;
 
         // Now that we know how many samples we have in total, we can update the channel buffers
         // with the correct capacity to make `push()` operations more efficient.
@@ -504,5 +472,81 @@ impl<T: BufRead> ComtradeParser<T> {
         self.builder.leap_second_status(Some(leap_second_status));
 
         Ok(())
+    }
+}
+
+/// Implement a line as a trait alias for clearer implementation.
+trait ConfigLine<'a>: Iterator<Item = &'a str> {
+    /// Read the next value as any parsable type.
+    fn read_value<T: FromStr>(&mut self) -> Result<T, ParseError> {
+        let str_value = self
+            .next()
+            .ok_or(ParseError::new("No value on line.".to_string()))?;
+        str_value
+            .parse()
+            .map_err(|e| ParseError::new(format!("Unable to parse the value. Value: {str_value}")))
+    }
+
+    /// This is used when there is an additional character on the end.
+    /// For example 16A for channels where we want 16.
+    fn read_value_with_trailing_char<T: FromStr>(&mut self) -> Result<T, ParseError> {
+        let str_value = self
+            .next()
+            .ok_or(ParseError::new("No value on line.".to_string()))?;
+        let trimmed_value = &str_value[..str_value.len().saturating_sub(1)];
+        trimmed_value.parse().map_err(|e| {
+            ParseError::new(format!("Unable to parse the value. Value: {trimmed_value}"))
+        })
+    }
+}
+/// Broad implementation of this trait so it acts as an alias.
+impl<'a, T: Iterator<Item = &'a str>> ConfigLine<'a> for T {}
+
+fn split_cfg_line(line: &str) -> impl ConfigLine {
+    line.split(CFG_SEPARATOR).map(|s| s.trim())
+}
+
+struct ChannelSizes {
+    total: usize,
+    analog: usize,
+    status: usize,
+}
+
+impl ChannelSizes {
+    fn from_line<'a>(mut cfg_line: impl ConfigLine<'a>) -> Result<Self, ParseError> {
+        let total = cfg_line.read_value()?;
+        let analog = cfg_line.read_value_with_trailing_char()?;
+        let status = cfg_line.read_value_with_trailing_char()?;
+        Ok(Self {
+            total,
+            analog,
+            status,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_line_uses_csv_seperator_and_trims_whitespace() {
+        let line = "  1, 2, 3 ,4   ";
+        let mut iter = split_cfg_line(line);
+        assert_eq!(iter.next(), Some("1"));
+        assert_eq!(iter.next(), Some("2"));
+        assert_eq!(iter.next(), Some("3"));
+        assert_eq!(iter.next(), Some("4"));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn get_channel_counts() {
+        let line = "20,4A,16D ";
+        let line = split_cfg_line(line);
+        let sizes = ChannelSizes::from_line(line).unwrap();
+        assert_eq!(sizes.total, 20);
+        assert_eq!(sizes.analog, 4);
+        assert_eq!(sizes.status, 16);
     }
 }

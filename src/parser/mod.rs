@@ -34,7 +34,7 @@ pub struct ParseError {
 }
 
 impl ParseError {
-    fn new(message: String) -> Self {
+    pub fn new(message: String) -> Self {
         ParseError { message }
     }
 }
@@ -227,9 +227,9 @@ pub struct ComtradeParser<T: BufRead> {
     inf_contents: String,
 
     builder: ComtradeBuilder,
-    total_num_samples: u32,
-    num_analog_channels: u32,
-    num_status_channels: u32,
+    total_num_samples: usize,
+    num_analog_channels: usize,
+    num_status_channels: usize,
     analog_channels: Vec<AnalogChannel>,
     status_channels: Vec<StatusChannel>,
     is_timestamp_critical: bool,

@@ -3,7 +3,6 @@ use std::io::BufReader;
 use std::path::Path;
 
 use chrono::{FixedOffset, NaiveDate};
-use float_cmp::approx_eq;
 
 use comtrade::{
     AnalogChannel, AnalogScalingMode, Comtrade, ComtradeParserBuilder, DataFormat, FormatRevision,
@@ -49,9 +48,6 @@ fn it_correctly_parses_sample_2013_files_with_ascii_data() {
         local_offset: Some(FixedOffset::west(5 * HOUR + 30 * MINUTE)),
         time_quality: Some(TimeQuality::ClockUnlocked(1)),
         leap_second_status: Some(LeapSecondStatus::NoCapability),
-        num_analog_channels: 4,
-        num_status_channels: 4,
-        num_total_channels: 8,
 
         sample_numbers: (1..=40).collect(),
         timestamps: (0..40).map(|i| i as f64 / expected_sample_rate).collect(),
