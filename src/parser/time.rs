@@ -39,25 +39,6 @@ impl<T: BufRead> ComtradeParser<T> {
     }
 }
 
-/// If a timestamp is specified to 6 dp then the timestamps should be interpreted as
-/// in the base unit of microseconds. If the timestamp has 9 dp, the timestamps should
-/// be interpreted in nanoseconds.
-pub fn ts_base_unit(datetime_stamp: &str) -> ParseResult<f64> {
-    let fraction = datetime_stamp.rsplit('.').next();
-
-    if fraction.is_none() {
-        return Err(ParseError::new(
-            "unable to find fractional value in date/time stamp".into(),
-        ));
-    }
-
-    if fraction.unwrap().len() <= 6 {
-        Ok(1e-6)
-    } else {
-        Ok(1e-9)
-    }
-}
-
 /// Parse COMTRADE time offset format into chrono struct.
 ///
 /// COMTRADE format looks like:

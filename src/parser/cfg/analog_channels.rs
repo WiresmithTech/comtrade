@@ -1,6 +1,6 @@
-use std::num::NonZeroUsize;
-use crate::error::ComtradeError;
 use super::ConfigLine;
+use crate::error::ComtradeError;
+use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AnalogScalingMode {
@@ -59,6 +59,5 @@ impl AnalogConfig {
             secondary_factor,
             scaling_mode,
         })
-        
     }
 }

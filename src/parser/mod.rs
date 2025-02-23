@@ -9,19 +9,11 @@ use std::str::FromStr;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::{
-    Comtrade, ComtradeBuilder,FileType,LeapSecondStatus,  TimeQuality,
-};
-pub use cfg::{AnalogConfig, StatusConfig, FormatRevision, AnalogScalingMode};
+use crate::{Comtrade, ComtradeBuilder, FileType, LeapSecondStatus, TimeQuality};
+pub use cfg::{AnalogConfig, AnalogScalingMode, FormatRevision, SamplingRate, StatusConfig};
 pub use dat::DataFormat;
 
-
 const CFG_SEPARATOR: &str = ",";
-
-// 1991 revision uses mm/dd/yyyy format for date whereas 1999 and 2013 use dd/mm/yyyy.
-// 1991 revision uses mm/dd/yyyy format for date whereas 1999 and 2013 use dd/mm/yyyy
-const CFG_DATETIME_FORMAT_OLD: &str = "%m/%d/%Y,%H:%M:%S%.f";
-const CFG_DATETIME_FORMAT: &str = "%d/%m/%Y,%H:%M:%S%.f";
 
 // To preserve structure integrity, a special value is used in the binary16, binary32
 // and float32 data formats when a timestamp is missing.
@@ -53,7 +45,6 @@ impl FromStr for FileType {
         }
     }
 }
-
 
 impl FromStr for DataFormat {
     type Err = ParseError;
@@ -296,7 +287,8 @@ impl<T: BufRead> ComtradeParser<T> {
     pub fn parse(mut self) -> ParseResult<Comtrade> {
         if self.cff_file.is_some() {
             self.load_cff()?;
-            self.parse_cfg().map_err(|e| ParseError::new(e.to_string()))?;
+            self.parse_cfg()
+                .map_err(|e| ParseError::new(e.to_string()))?;
             self.parse_dat()?;
         } else {
             if let Some(ref mut cfg_file) = self.cfg_file {
@@ -311,7 +303,8 @@ impl<T: BufRead> ComtradeParser<T> {
                 ));
             }
 
-            self.parse_cfg().map_err(|e| ParseError::new(e.to_string()))?;
+            self.parse_cfg()
+                .map_err(|e| ParseError::new(e.to_string()))?;
 
             if let Some(ref mut dat_file) = self.dat_file {
                 match self.data_format {

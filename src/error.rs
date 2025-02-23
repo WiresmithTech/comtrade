@@ -1,6 +1,6 @@
+use crate::ParseError;
 use std::num::NonZeroUsize;
 use thiserror::Error;
-use crate::ParseError;
 
 #[derive(Debug, Error, PartialEq, Clone)]
 pub enum ComtradeError {
@@ -20,14 +20,23 @@ pub enum ComtradeError {
     InvalidNormalStatus(NonZeroUsize),
     #[error("Parser Error: {0:?}")]
     ParserError(ParseError),
+    #[error("Unable to find timestamp precision")]
+    CantFindTimestampPrecision,
 }
-
 
 impl ComtradeError {
     pub fn add_context(self, msg: &'static str) -> Self {
-        match  self {
+        match self {
             ComtradeError::MissingLineElements(_) => ComtradeError::MissingLineElements(msg),
-            ComtradeError::InvalidValue { value, type_, field: _ } => { ComtradeError::InvalidValue { value, type_, field: msg }}
+            ComtradeError::InvalidValue {
+                value,
+                type_,
+                field: _,
+            } => ComtradeError::InvalidValue {
+                value,
+                type_,
+                field: msg,
+            },
             _ => self,
         }
     }

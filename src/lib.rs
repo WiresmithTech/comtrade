@@ -1,10 +1,13 @@
-pub mod parser;
 mod error;
+pub mod parser;
 
 use chrono::{FixedOffset, NaiveDateTime};
 use derive_builder::Builder;
 
-pub use parser::{ComtradeParser, ComtradeParserBuilder, ParseError, ParseResult, AnalogChannel, StatusChannel, AnalogConfig, StatusConfig, AnalogScalingMode, FormatRevision, DataFormat};
+pub use parser::{
+    AnalogChannel, AnalogConfig, AnalogScalingMode, ComtradeParser, ComtradeParserBuilder,
+    DataFormat, FormatRevision, ParseError, ParseResult, SamplingRate, StatusChannel, StatusConfig,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 enum FileType {
@@ -12,16 +15,6 @@ enum FileType {
     Dat,
     Hdr,
     Inf,
-}
-
-
-
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SamplingRate {
-    pub rate_hz: f64,
-    pub end_sample_number: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

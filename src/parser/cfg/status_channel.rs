@@ -1,6 +1,6 @@
-use std::num::NonZeroUsize;
 use crate::error::ComtradeError;
 use crate::parser::cfg::ConfigLine;
+use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StatusConfig {
@@ -12,7 +12,9 @@ pub struct StatusConfig {
 }
 
 impl StatusConfig {
-    pub fn from_config_row<'a>(mut config_line: impl ConfigLine<'a>) -> Result<Self, ComtradeError> {
+    pub fn from_config_row<'a>(
+        mut config_line: impl ConfigLine<'a>,
+    ) -> Result<Self, ComtradeError> {
         let status_index = config_line.read_value()?;
         let name = config_line.read_value()?;
         let phase = config_line.read_value()?;
@@ -20,7 +22,7 @@ impl StatusConfig {
         let normal_status_value = config_line.read_value()?;
 
         if normal_status_value != 0 && normal_status_value != 1 {
-            return Err(ComtradeError::InvalidNormalStatus(status_index))
+            return Err(ComtradeError::InvalidNormalStatus(status_index));
         }
         Ok(Self {
             index: status_index,
@@ -34,8 +36,8 @@ impl StatusConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::cfg::split_cfg_line;
     use super::*;
+    use crate::parser::cfg::split_cfg_line;
 
     #[test]
     fn errors_on_invalid_standard_status_value() {

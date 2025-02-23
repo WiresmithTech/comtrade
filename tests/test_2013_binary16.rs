@@ -6,8 +6,8 @@ use std::path::Path;
 use chrono::{FixedOffset, NaiveDate};
 
 use comtrade::{
-    AnalogChannel, AnalogScalingMode, AnalogConfig, ComtradeParserBuilder, Comtrade,
-    DataFormat, FormatRevision, LeapSecondStatus, SamplingRate, StatusChannel, TimeQuality, StatusConfig
+    AnalogChannel, AnalogConfig, AnalogScalingMode, Comtrade, ComtradeParserBuilder, DataFormat,
+    FormatRevision, LeapSecondStatus, SamplingRate, StatusChannel, StatusConfig, TimeQuality,
 };
 
 mod common;

@@ -1,13 +1,13 @@
 use std::fs::File;
 use std::io::BufReader;
-use std::path::Path;
 use std::num::NonZeroUsize;
+use std::path::Path;
 
 use chrono::NaiveDate;
 
 use comtrade::{
-    AnalogChannel, AnalogConfig, AnalogScalingMode, Comtrade, ComtradeParserBuilder, DataFormat, FormatRevision,
-    SamplingRate, StatusChannel, StatusConfig,
+    AnalogChannel, AnalogConfig, AnalogScalingMode, Comtrade, ComtradeParserBuilder, DataFormat,
+    FormatRevision, SamplingRate, StatusChannel, StatusConfig,
 };
 
 mod common;

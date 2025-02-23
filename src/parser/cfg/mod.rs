@@ -1,21 +1,23 @@
 mod analog_channels;
-mod status_channel;
+mod date_time;
 mod id_line;
+mod revisions;
+mod sample_rates;
+mod status_channel;
 
+use crate::error::ComtradeError;
+use crate::parser::cfg::id_line::IdRow;
+use crate::parser::time::parse_time_offset;
+use crate::parser::{AnalogChannel, DataFormat, StatusChannel, CFG_SEPARATOR};
+use crate::ComtradeParser;
+pub use analog_channels::{AnalogConfig, AnalogScalingMode};
+use date_time::ComtradeDateTime;
+pub use revisions::FormatRevision;
+pub use sample_rates::SamplingRate;
+pub use status_channel::StatusConfig;
 use std::any::type_name;
-use crate::parser::time::{parse_time_offset, ts_base_unit};
-use crate::parser::{AnalogChannel, DataFormat, StatusChannel, CFG_DATETIME_FORMAT, CFG_DATETIME_FORMAT_OLD, CFG_SEPARATOR};
-use crate::{ComtradeParser,
-    ParseError, SamplingRate
-};
-use chrono::NaiveDateTime;
 use std::io::BufRead;
 use std::str::FromStr;
-use crate::error::ComtradeError;
-use crate::parser::cfg::id_line::{IdRow};
-pub use id_line::FormatRevision;
-pub use analog_channels::{AnalogConfig, AnalogScalingMode};
-pub use status_channel::StatusConfig;
 
 impl<T: BufRead> ComtradeParser<T> {
     pub(super) fn parse_cfg(&mut self) -> Result<(), ComtradeError> {
@@ -26,17 +28,15 @@ impl<T: BufRead> ComtradeParser<T> {
 
         let early_end_err = || ComtradeError::UnexpectedEndOfCfgFile;
 
-        let mut line_number = 1;
-
         let line = lines.next().ok_or_else(early_end_err)?;
         let line = split_cfg_line(line);
         let id_line = IdRow::from_config_line(line)?;
 
         self.builder.station_name(id_line.station_name);
-        self.builder.recording_device_id(id_line.recording_device_id);
+        self.builder
+            .recording_device_id(id_line.recording_device_id);
         self.builder.revision(id_line.format_revision);
         let format_revision = id_line.format_revision;
-        line_number += 1;
 
         let line = lines.next().ok_or_else(early_end_err)?;
         let ChannelSizes {
@@ -64,8 +64,20 @@ impl<T: BufRead> ComtradeParser<T> {
             let config_line = split_cfg_line(line);
             status_channels.push(StatusConfig::from_config_row(config_line)?);
         }
-        self.analog_channels = analog_channels.into_iter().map(|c| AnalogChannel { config: c, data: Vec::new()}).collect();
-        self.status_channels = status_channels.into_iter().map(|c| StatusChannel { config: c, data: Vec::new()}).collect();
+        self.analog_channels = analog_channels
+            .into_iter()
+            .map(|c| AnalogChannel {
+                config: c,
+                data: Vec::new(),
+            })
+            .collect();
+        self.status_channels = status_channels
+            .into_iter()
+            .map(|c| StatusChannel {
+                config: c,
+                data: Vec::new(),
+            })
+            .collect();
 
         let line = lines.next().ok_or_else(early_end_err)?;
         let mut line = split_cfg_line(line);
@@ -75,30 +87,17 @@ impl<T: BufRead> ComtradeParser<T> {
         let line_frequency = line.read_value()?;
         self.builder.line_frequency(line_frequency);
 
-        line_number += 1;
-
         let line = lines.next().ok_or_else(early_end_err)?;
         let mut line = split_cfg_line(line);
-
         let num_sampling_rates = line.read_value()?;
 
         let mut sampling_rates: Vec<SamplingRate> = Vec::with_capacity(num_sampling_rates as usize);
 
         for _ in 0..num_sampling_rates {
             let line = lines.next().ok_or_else(early_end_err)?;
-            let mut line = split_cfg_line(line);
-
-            // The sample rate in Hertz of this sample.
-            let rate_hz = line.read_value()?;
-
-            // The sample number of the final sample that uses this sample rate. Note this corresponds
-            // to the sample number value in the data itself, not an index.
-            let end_sample_number = line.read_value()?;
-
-            sampling_rates.push(SamplingRate {
-                rate_hz,
-                end_sample_number,
-            });
+            let line = split_cfg_line(line);
+            let sampling_rate = SamplingRate::from_config_line(line)?;
+            sampling_rates.push(sampling_rate);
         }
 
         self.total_num_samples = sampling_rates
@@ -107,61 +106,34 @@ impl<T: BufRead> ComtradeParser<T> {
             .max()
             .unwrap() as usize;
 
-
         // If file has 0 for number of sample rates, there's an extra line which just contains 0
         // indicating no fixed sample rate and the total number of samples. We don't need this data
         // so we just ignore it.
         if num_sampling_rates == 0 {
-            line_number += 1;
             lines.next().ok_or_else(early_end_err)?;
         }
 
         self.is_timestamp_critical = num_sampling_rates == 0;
         self.builder.sampling_rates(sampling_rates);
 
-        line_number += 1;
         let line = lines.next().ok_or_else(early_end_err)?.trim();
-
-        // Date/time stamps
-        // dd/mm/yyyy,hh:mm:ss.ssssss
-        // dd/mm/yyyy,hh:mm:ss.ssssss
-        // TODO: Whether this is to micro or nano seconds determines whether how to calculate
-        //       real time values from timestamps (I think - not 100% on this).
-
-        // Time of the first data sample in data file.
-        let datetime_format = if format_revision == FormatRevision::Revision1991 {
-            CFG_DATETIME_FORMAT_OLD
-        } else {
-            CFG_DATETIME_FORMAT
-        };
-
         let start_time =
-            NaiveDateTime::parse_from_str(line, datetime_format).map_err(|_| {
-                ComtradeError::InvalidValue {
-                    value: line.to_string(),
-                    type_: "datetime",
-                    field: "start time",}
-            })?;
-        self.builder.start_time(start_time);
-        self.ts_base_unit = ts_base_unit(line).map_err(|e| ComtradeError::ParserError(e))?;
+            ComtradeDateTime::from_config_line(split_cfg_line(line), &format_revision)?;
 
-        line_number += 1;
+        self.builder.start_time(start_time.date_time);
+        self.ts_base_unit = start_time.precision.to_value();
+
         let line = lines.next().ok_or_else(early_end_err)?.trim();
 
         // Time that the COMTRADE record recording was triggered.
         let trigger_time =
-            NaiveDateTime::parse_from_str(line, datetime_format).map_err(|_| {
-                ParseError::new(format!(
-                    "invalid datetime value for trigger time on line {}: {}",
-                    line_number, line.to_string(),
-                ))
-            }).map_err(|e| ComtradeError::ParserError(e))?;
-        self.builder.trigger_time(trigger_time);
+            ComtradeDateTime::from_config_line(split_cfg_line(line), &format_revision)?;
+        self.builder.trigger_time(trigger_time.date_time);
 
         // According to the spec, if the start time is in micro/nanoseconds, the
         // other one should be too. If they are inconsistent, just take the lower one
         // to be safe. In the future this would be a good place to raise a warning.
-        self.ts_base_unit = self.ts_base_unit.min(ts_base_unit(line).map_err(|e| ComtradeError::ParserError(e))?);
+        self.ts_base_unit = self.ts_base_unit.min(trigger_time.precision.to_value());
 
         let line = lines.next().ok_or_else(early_end_err)?;
         let mut line = split_cfg_line(line);
@@ -203,14 +175,15 @@ impl<T: BufRead> ComtradeParser<T> {
 
         let line = lines.next().ok_or_else(early_end_err)?;
         let mut line_values = split_cfg_line(line);
-        let time_offset = parse_time_offset(&line_values.read_value::<String>()?).map_err(|e| ComtradeError::ParserError(e))?;
-        let local_offset = parse_time_offset(&line_values.read_value::<String>()?).map_err(|e| ComtradeError::ParserError(e))?;
+        let time_offset = parse_time_offset(&line_values.read_value::<String>()?)
+            .map_err(|e| ComtradeError::ParserError(e))?;
+        let local_offset = parse_time_offset(&line_values.read_value::<String>()?)
+            .map_err(|e| ComtradeError::ParserError(e))?;
 
         // Time information and relationship between local time and UTC
         // time_code, local_code
         self.builder.time_offset(time_offset);
-        self.builder
-            .local_offset(local_offset);
+        self.builder.local_offset(local_offset);
 
         let line = lines.next().ok_or_else(early_end_err)?;
         let mut line_values = split_cfg_line(line);
@@ -229,26 +202,36 @@ impl<T: BufRead> ComtradeParser<T> {
 
 /// Implement a line as a trait alias for clearer implementation.
 pub trait ConfigLine<'a>: Iterator<Item = &'a str> {
+    /// Read the next value as a str type.
+    ///
+    /// This will assume there should be a next value and return in an error.
+    fn read_next(&mut self) -> Result<&'a str, ComtradeError> {
+        self.next()
+            .ok_or(ComtradeError::MissingLineElements(""))
+            .map(|s| s.trim())
+    }
     /// Read the next value as any parsable type.
     fn read_value<T: FromStr>(&mut self) -> Result<T, ComtradeError> {
-        let str_value = self
-            .next()
-            .ok_or(ComtradeError::MissingLineElements(""))?;
-        str_value.trim()
-            .parse()
-            .map_err(|_| ComtradeError::InvalidValue { value: str_value.to_string(), type_: type_name::<T>(), field: ""})
+        let str_value = self.read_next()?;
+        str_value.parse().map_err(|_| ComtradeError::InvalidValue {
+            value: str_value.to_string(),
+            type_: type_name::<T>(),
+            field: "",
+        })
     }
 
     /// This is used when there is an additional character on the end.
     /// For example 16A for channels where we want 16.
     fn read_value_with_trailing_char<T: FromStr>(&mut self) -> Result<T, ComtradeError> {
-        let str_value = self
-            .next()
-            .ok_or(ComtradeError::MissingLineElements(""))?;
+        let str_value = self.read_next()?;
         let trimmed_value = &str_value[..str_value.len().saturating_sub(1)];
-        trimmed_value.parse().map_err(|_| {
-           ComtradeError::InvalidValue { value: str_value.to_string(), type_: type_name::<T>(), field: ""}
-        })
+        trimmed_value
+            .parse()
+            .map_err(|_| ComtradeError::InvalidValue {
+                value: str_value.to_string(),
+                type_: type_name::<T>(),
+                field: "",
+            })
     }
 }
 /// Broad implementation of this trait so it acts as an alias.
@@ -266,13 +249,16 @@ struct ChannelSizes {
 impl ChannelSizes {
     fn from_line<'a>(mut cfg_line: impl ConfigLine<'a>) -> Result<Self, ComtradeError> {
         // Total is not actually needed.
-        let _total: usize = cfg_line.read_value().map_err(|e| e.add_context("Channel Sizes: Total"))?;
-        let analog = cfg_line.read_value_with_trailing_char().map_err(|e| e.add_context("Channel Sizes: Analog"))?;
-        let status = cfg_line.read_value_with_trailing_char().map_err(|e| e.add_context("Channel Sizes: Status"))?;
-        Ok(Self {
-            analog,
-            status,
-        })
+        let _total: usize = cfg_line
+            .read_value()
+            .map_err(|e| e.add_context("Channel Sizes: Total"))?;
+        let analog = cfg_line
+            .read_value_with_trailing_char()
+            .map_err(|e| e.add_context("Channel Sizes: Analog"))?;
+        let status = cfg_line
+            .read_value_with_trailing_char()
+            .map_err(|e| e.add_context("Channel Sizes: Status"))?;
+        Ok(Self { analog, status })
     }
 }
 

@@ -3,8 +3,8 @@ mod formats;
 use crate::parser::TIMESTAMP_MISSING;
 use crate::{ComtradeParser, ParseError, ParseResult};
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::io::{BufRead, Cursor};
 pub use formats::DataFormat;
+use std::io::{BufRead, Cursor};
 
 impl<T: BufRead> ComtradeParser<T> {
     pub(super) fn parse_dat(&mut self) -> ParseResult<()> {
@@ -73,7 +73,9 @@ impl<T: BufRead> ComtradeParser<T> {
                     ))
                 })?;
 
-                let adder = self.analog_channels[channel_idx as usize].config.offset_adder;
+                let adder = self.analog_channels[channel_idx as usize]
+                    .config
+                    .offset_adder;
                 let multiplier = self.analog_channels[channel_idx as usize].config.multiplier;
                 let value = value_raw * multiplier + adder;
 
@@ -147,7 +149,9 @@ impl<T: BufRead> ComtradeParser<T> {
                         ), // TODO: Turn into proper parse result.
                     };
 
-                    let adder = self.analog_channels[channel_idx as usize].config.offset_adder;
+                    let adder = self.analog_channels[channel_idx as usize]
+                        .config
+                        .offset_adder;
                     let multiplier = self.analog_channels[channel_idx as usize].config.multiplier;
                     value * multiplier + adder
                 })
