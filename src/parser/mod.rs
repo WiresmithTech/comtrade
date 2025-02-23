@@ -6,14 +6,15 @@ mod time;
 use std::io::BufRead;
 use std::str::FromStr;
 
-use byteorder::ReadBytesExt;
 use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::{
-    AnalogChannel, AnalogScalingMode, Comtrade, ComtradeBuilder, DataFormat, FileType,
-    FormatRevision, LeapSecondStatus, StatusChannel, TimeQuality,
+    Comtrade, ComtradeBuilder,FileType,LeapSecondStatus,  TimeQuality,
 };
+pub use cfg::{AnalogConfig, StatusConfig, FormatRevision, AnalogScalingMode};
+pub use dat::DataFormat;
+
 
 const CFG_SEPARATOR: &str = ",";
 
@@ -28,7 +29,7 @@ const TIMESTAMP_MISSING: u32 = 0xffffffff;
 
 pub type ParseResult<T> = std::result::Result<T, ParseError>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParseError {
     message: String,
 }
@@ -53,27 +54,6 @@ impl FromStr for FileType {
     }
 }
 
-impl Default for FormatRevision {
-    fn default() -> Self {
-        FormatRevision::Revision1991
-    }
-}
-
-impl FromStr for FormatRevision {
-    type Err = ParseError;
-
-    fn from_str(value: &str) -> ParseResult<Self> {
-        match value {
-            "1991" => Ok(FormatRevision::Revision1991),
-            "1999" => Ok(FormatRevision::Revision1999),
-            "2013" => Ok(FormatRevision::Revision2013),
-            _ => Err(ParseError::new(format!(
-                "unrecognised or invalid COMTRADE format revision: '{}'",
-                value.to_owned(),
-            ))),
-        }
-    }
-}
 
 impl FromStr for DataFormat {
     type Err = ParseError;
@@ -153,6 +133,34 @@ lazy_static! {
     static ref CFF_HEADER_REGEXP: Regex = Regex::new(r#"(?i)---\s*file type:\s*(?P<file_type>[a-z]+)(\s+(?P<data_format>[a-z]+))?\s*(:\s*(?P<data_size>\d+))?\s*---$"#).unwrap();
     static ref DATE_REGEXP: Regex = Regex::new("([0-9]{1,2})/([0-9]{1,2})/([0-9]{2,4})").unwrap();
     static ref TIME_REGEXP: Regex = Regex::new("([0-9]{2}):([0-9]{2}):([0-9]{2})(\\.([0-9]{1,12}))?").unwrap();
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AnalogChannel {
+    pub config: AnalogConfig,
+    pub data: Vec<f64>,
+}
+
+impl AnalogChannel {
+    fn push_datum(&mut self, value: f64) {
+        self.data.push(value);
+    }
+
+    // TODO: Method for retrieving datum at index / sample number including value and time calculations.
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StatusChannel {
+    pub config: StatusConfig,
+    pub data: Vec<u8>, // Values are 0 or 1.
+}
+
+impl StatusChannel {
+    fn push_datum(&mut self, value: u8) {
+        self.data.push(value);
+    }
+
+    // TODO: Method for retrieving datum at index / sample number including time calculations.
 }
 
 // Cannot derive builder for this because of complexity of wrapping `T: BufRead` in
@@ -288,7 +296,7 @@ impl<T: BufRead> ComtradeParser<T> {
     pub fn parse(mut self) -> ParseResult<Comtrade> {
         if self.cff_file.is_some() {
             self.load_cff()?;
-            self.parse_cfg()?;
+            self.parse_cfg().map_err(|e| ParseError::new(e.to_string()))?;
             self.parse_dat()?;
         } else {
             if let Some(ref mut cfg_file) = self.cfg_file {
@@ -303,7 +311,7 @@ impl<T: BufRead> ComtradeParser<T> {
                 ));
             }
 
-            self.parse_cfg()?;
+            self.parse_cfg().map_err(|e| ParseError::new(e.to_string()))?;
 
             if let Some(ref mut dat_file) = self.dat_file {
                 match self.data_format {

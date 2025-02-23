@@ -1,9 +1,10 @@
 pub mod parser;
+mod error;
 
 use chrono::{FixedOffset, NaiveDateTime};
 use derive_builder::Builder;
 
-pub use parser::{ComtradeParser, ComtradeParserBuilder, ParseError, ParseResult};
+pub use parser::{ComtradeParser, ComtradeParserBuilder, ParseError, ParseResult, AnalogChannel, StatusChannel, AnalogConfig, StatusConfig, AnalogScalingMode, FormatRevision, DataFormat};
 
 #[derive(Debug, Clone, PartialEq)]
 enum FileType {
@@ -13,92 +14,9 @@ enum FileType {
     Inf,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum FormatRevision {
-    Revision1991,
-    Revision1999,
-    Revision2013,
-}
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum DataFormat {
-    Ascii,
-    Binary16,
-    Binary32,
-    Float32,
-}
 
-impl Default for DataFormat {
-    fn default() -> Self {
-        DataFormat::Ascii
-    }
-}
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum AnalogScalingMode {
-    Primary,
-    Secondary,
-}
-
-// TODO: Most of these members can be private and just used for calculations, some of
-//       them don't even need to be in the actual struct at all but can just be used
-//       at parse-time (e.g. multiplying/additive factors).
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct AnalogChannel {
-    /// 1-indexed counter used to determine which channel this is in a COMTRADE record.
-    pub index: u32,
-    pub name: String,
-    pub phase: String,
-    pub circuit_component_being_monitored: String,
-    pub units: String,
-    pub min_value: f64,
-    pub max_value: f64,
-
-    // Used to calculate real values from data points so don't need to be exposed.
-    pub multiplier: f64,
-    pub offset_adder: f64,
-
-    /// Value in microseconds.
-    pub skew: f64,
-
-    /// Used to convert between primary and secondary values in channel.
-    pub primary_factor: f64,
-
-    /// Used to convert between primary and secondary values in channel.
-    pub secondary_factor: f64,
-
-    pub scaling_mode: AnalogScalingMode,
-
-    pub data: Vec<f64>,
-}
-
-impl AnalogChannel {
-    fn push_datum(&mut self, value: f64) {
-        self.data.push(value);
-    }
-
-    // TODO: Method for retrieving datum at index / sample number including value and time calculations.
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct StatusChannel {
-    pub index: u32,
-    pub name: String,
-    pub phase: String,
-    pub circuit_component_being_monitored: String,
-    pub normal_status_value: u8,
-
-    pub data: Vec<u8>, // Values are 0 or 1.
-}
-
-impl StatusChannel {
-    fn push_datum(&mut self, value: u8) {
-        self.data.push(value);
-    }
-
-    // TODO: Method for retrieving datum at index / sample number including time calculations.
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SamplingRate {

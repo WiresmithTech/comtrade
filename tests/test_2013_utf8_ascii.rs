@@ -1,12 +1,13 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::num::NonZeroUsize;
 
 use chrono::{FixedOffset, NaiveDate};
 
 use comtrade::{
-    AnalogChannel, AnalogScalingMode, Comtrade, ComtradeParserBuilder, DataFormat, FormatRevision,
-    LeapSecondStatus, SamplingRate, StatusChannel, TimeQuality,
+    AnalogChannel, AnalogConfig, AnalogScalingMode, Comtrade, ComtradeParserBuilder, DataFormat, FormatRevision,
+    LeapSecondStatus, SamplingRate, StatusChannel, StatusConfig, TimeQuality,
 };
 
 mod common;
@@ -54,19 +55,21 @@ fn it_correctly_parses_sample_2013_files_with_ascii_data_using_utf8() {
 
         analog_channels: vec![
             AnalogChannel {
-                index: 1,
-                name: "IA ".to_string(),
-                phase: "".to_string(),
-                circuit_component_being_monitored: "Line123".to_string(),
-                units: " A".into(),
-                multiplier: 0.1138916015625,
-                offset_adder: 0.05694580078125,
-                skew: 0.0,
-                min_value: -32768.0,
-                max_value: 32767.0,
-                primary_factor: 933.0,
-                secondary_factor: 1.0,
-                scaling_mode: AnalogScalingMode::Secondary,
+                config: AnalogConfig {
+                    index: NonZeroUsize::new(1).unwrap(),
+                    name: "IA".to_string(),
+                    phase: "".to_string(),
+                    circuit_component_being_monitored: "Line123".to_string(),
+                    units: "A".into(),
+                    min_value: -32768.0,
+                    max_value: 32767.0,
+                    multiplier: 0.1138916015625,
+                    offset_adder: 0.05694580078125,
+                    skew: 0.0,
+                    primary_factor: 933.0,
+                    secondary_factor: 1.0,
+                    scaling_mode: AnalogScalingMode::Secondary,
+                },
                 data: vec![
                     -9.39605712890625,
                     -1.65142822265625,
@@ -111,19 +114,21 @@ fn it_correctly_parses_sample_2013_files_with_ascii_data_using_utf8() {
                 ],
             },
             AnalogChannel {
-                index: 2,
-                name: "IB ".to_string(),
-                phase: "".to_string(),
-                circuit_component_being_monitored: "Line123".to_string(),
-                units: " A".into(),
-                multiplier: 0.1138916015625,
-                offset_adder: 0.05694580078125,
-                skew: 0.0,
-                min_value: -32768.0,
-                max_value: 32767.0,
-                primary_factor: 933.0,
-                secondary_factor: 1.0,
-                scaling_mode: AnalogScalingMode::Secondary,
+                config: AnalogConfig {
+                    index: NonZeroUsize::new(2).unwrap(),
+                    name: "IB".to_string(),
+                    phase: "".to_string(),
+                    circuit_component_being_monitored: "Line123".to_string(),
+                    units: "A".into(),
+                    min_value: -32768.0,
+                    max_value: 32767.0,
+                    multiplier: 0.1138916015625,
+                    offset_adder: 0.05694580078125,
+                    skew: 0.0,
+                    primary_factor: 933.0,
+                    secondary_factor: 1.0,
+                    scaling_mode: AnalogScalingMode::Secondary,
+                },
                 data: vec![
                     7.80157470703125,
                     0.62640380859375,
@@ -168,19 +173,21 @@ fn it_correctly_parses_sample_2013_files_with_ascii_data_using_utf8() {
                 ],
             },
             AnalogChannel {
-                index: 3,
-                name: "IC ".to_string(),
-                phase: "".to_string(),
-                circuit_component_being_monitored: "Line123".to_string(),
-                units: " A".into(),
-                multiplier: 0.1138916015625,
-                offset_adder: 0.05694580078125,
-                skew: 0.0,
-                min_value: -32768.0,
-                max_value: 32767.0,
-                primary_factor: 933.0,
-                secondary_factor: 1.0,
-                scaling_mode: AnalogScalingMode::Secondary,
+                config: AnalogConfig {
+                    index: NonZeroUsize::new(3).unwrap(),
+                    name: "IC".to_string(),
+                    phase: "".to_string(),
+                    circuit_component_being_monitored: "Line123".to_string(),
+                    units: "A".into(),
+                    min_value: -32768.0,
+                    max_value: 32767.0,
+                    multiplier: 0.1138916015625,
+                    offset_adder: 0.05694580078125,
+                    skew: 0.0,
+                    primary_factor: 933.0,
+                    secondary_factor: 1.0,
+                    scaling_mode: AnalogScalingMode::Secondary,
+                },
                 data: vec![
                     0.85418701171875,
                     0.51251220703125,
@@ -225,19 +232,21 @@ fn it_correctly_parses_sample_2013_files_with_ascii_data_using_utf8() {
                 ],
             },
             AnalogChannel {
-                index: 4,
-                name: "3I0".to_string(),
-                phase: "".to_string(),
-                circuit_component_being_monitored: "Line123".to_string(),
-                units: " A".into(),
-                multiplier: 0.1138916015625,
-                offset_adder: 0.05694580078125,
-                skew: 0.0,
-                min_value: -32768.0,
-                max_value: 32767.0,
-                primary_factor: 933.0,
-                secondary_factor: 1.0,
-                scaling_mode: AnalogScalingMode::Secondary,
+                config: AnalogConfig {
+                    index: NonZeroUsize::new(4).unwrap(),
+                    name: "3I0".to_string(),
+                    phase: "".to_string(),
+                    circuit_component_being_monitored: "Line123".to_string(),
+                    units: "A".into(),
+                    min_value: -32768.0,
+                    max_value: 32767.0,
+                    multiplier: 0.1138916015625,
+                    offset_adder: 0.05694580078125,
+                    skew: 0.0,
+                    primary_factor: 933.0,
+                    secondary_factor: 1.0,
+                    scaling_mode: AnalogScalingMode::Secondary,
+                },
                 data: vec![
                     -0.85418701171875,
                     -0.62640380859375,
@@ -285,44 +294,52 @@ fn it_correctly_parses_sample_2013_files_with_ascii_data_using_utf8() {
 
         status_channels: vec![
             StatusChannel {
-                index: 1,
-                name: "51A".into(),
-                phase: "".into(),
-                circuit_component_being_monitored: "Line123".into(),
-                normal_status_value: 0,
+                config: StatusConfig {
+                    index: NonZeroUsize::new(1).unwrap(),
+                    name: "51A".into(),
+                    phase: "".into(),
+                    circuit_component_being_monitored: "Line123".into(),
+                    normal_status_value: 0,
+                },
                 data: vec![
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 ],
             },
             StatusChannel {
-                index: 2,
-                name: "51B".into(),
-                phase: "".into(),
-                circuit_component_being_monitored: "Line123".into(),
-                normal_status_value: 0,
+                config: StatusConfig {
+                    index: NonZeroUsize::new(2).unwrap(),
+                    name: "51B".into(),
+                    phase: "".into(),
+                    circuit_component_being_monitored: "Line123".into(),
+                    normal_status_value: 0,
+                },
                 data: vec![
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 ],
             },
             StatusChannel {
-                index: 3,
-                name: "51C".into(),
-                phase: "".into(),
-                circuit_component_being_monitored: "Line123".into(),
-                normal_status_value: 0,
+                config: StatusConfig {
+                    index: NonZeroUsize::new(3).unwrap(),
+                    name: "51C".into(),
+                    phase: "".into(),
+                    circuit_component_being_monitored: "Line123".into(),
+                    normal_status_value: 0,
+                },
                 data: vec![
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 ],
             },
             StatusChannel {
-                index: 4,
-                name: "51N".into(),
-                phase: "".into(),
-                circuit_component_being_monitored: "Line123".into(),
-                normal_status_value: 0,
+                config: StatusConfig {
+                    index: NonZeroUsize::new(4).unwrap(),
+                    name: "51N".into(),
+                    phase: "".into(),
+                    circuit_component_being_monitored: "Line123".into(),
+                    normal_status_value: 0,
+                },
                 data: vec![
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
